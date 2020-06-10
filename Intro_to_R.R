@@ -1,7 +1,8 @@
 # Examples from http://r-statistics.co/R-Tutorial.html
 
 
-# R ignores everything that comes after the "#". This is useful to insert comments that should not be run.
+# R ignores everything that comes after the "#"
+# This is useful to insert comments that should not be run
 
 
 # How do I run code? ------------------------------------------------------
@@ -10,6 +11,7 @@
 # Or, you write your code in a script file (.R), move the cursor to the line where the code is, and press
 # "ctrl + enter"
 # Press "shift + alt + k" for a quick reference of keyboard shortcuts
+
 
 # Using R as a calculator -------------------------------------------------
 
@@ -86,7 +88,7 @@ data.frame(vector0, vector1) # use data.frame() to create a data frame
 # How to install packages -------------------------------------------------
 
 # install.packages("name of package")
-install.packages("car") # package is installed and stored in your library
+# install.packages("car") # package is installed and stored in your library
 
 # how to load the package from the library
 library(car) # note the lack of quotation marks
@@ -107,10 +109,10 @@ base::mean(c(2,5))
 # How to plot data? -----------------------------------------------------
 
 # use ggplot2 package
-install.packages("ggplot2") # install package
+# install.packages("ggplot2") # install package
 library(ggplot2) # load package
 # or
-install.packages("tidyverse") # install package
+# install.packages("tidyverse") # install package
 library(tidyverse) # load package
 
 
@@ -151,7 +153,6 @@ ggplot(iris, aes(x = Species, y = Sepal.Length, color = Species)) +
   geom_point() +
   labs(y = "Sepal length (au)", title = "This is a title", color = "This is a legend label")
 
-?iris
 # Setting up a project file -----------------------------------------------
 # Keep all the files associated with a project organized together
 # The files can be: input data, scripts, figures etc.
@@ -172,12 +173,22 @@ read.csv2()
 read.table("animalstudy.csv", sep = ",")
 read.csv("animalstudy.csv", header = TRUE)
 
-
-
 animal.study <- read.csv("animalstudy.csv", header = TRUE)
+
+# How to inspect and plot my imported data --------------------------------------------
+
 View(animal.study)
 str(animal.study)
+summary(animal.study)
 
+# Another option to get descriptive statistics
+# install.packages("pastecs")
+library(pastecs) # used for stat.desc function
+stat.desc(animal.study$Weight, norm = T)
+by(animal.study$Weight, animal.study$Surgery, stat.desc, norm = T)
+
+
+# plot the data set
 ggplot(animal.study, aes(Animal, Weight, color = Surgery)) +
   geom_point()
 
@@ -220,7 +231,9 @@ ggplot(animal.study, aes(Animal, Weight)) +
   geom_point(aes(color = Surgery))+
   stat_summary(fun = "mean", geom = "point")
 
-library(forcats)
+# install.packages("forcats")
+library(forcats) # load the forcats package (needed for factor manipulation)
+
 ggplot(animal.study, aes(Animal, Weight)) +
   geom_point(aes(color = fct_rev(Surgery)))+  # reverse order of of Surgery variable
   stat_summary(fun = "mean", geom = "point", aes(shape="mean"), color="green")+ # add mean points
@@ -254,12 +267,80 @@ ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width)) +
                                  state_length = 1)
 
 
+# Manipulate several files at once (advanced example - only a showcase) ----------------------------------------
+
+
+# first load the following packages (some should already have been loaded)
+library(tidyverse)
+library(reshape2)
+library(lubridate)
+library(scales)
+
+
+
+folderpath <-"Loading curves" 
+# the folder "Loading curves" has to be in the working directory
+
+files <- list.files(path = folderpath, 
+                    pattern = "*.txt", 
+                    full.names = TRUE, 
+                    recursive = FALSE)
+
+files
+
+# for loop
+# for (i in files[1:2]){  # select only the first two files
+for (i in files){  # all files
+  df<-read.delim(i,  header = TRUE, sep = "\t")  
+  
+  # rename loading curve variables
+  df<-df %>%  
+    dplyr::rename(`Loading curve 1` =  Loading1..N.,
+                  `Loading curve 2` =  Loading2..N.,
+                  `Loading curve 3` =  Loading3..N.,
+                  `Loading curve 4` =  Loading4..N.)
+  
+  
+  df$Time<-as.POSIXct(strptime(df$Time, format="%H:%M:%OS")) # convert time to POSIX format
+  
+  # melt to data frame to long format
+  df_long<-melt(df, 
+                id = c("Time"), 
+                measure = c("Loading curve 1", 
+                          "Loading curve 2", 
+                          "Loading curve 3", 
+                          "Loading curve 4")) 
+  
+  # create plot
+  myplot<-
+    ggplot(df_long)+
+    geom_line(aes(Time,  value, color = variable))+
+    geom_point(aes(Time,  value, color = variable))+
+    facet_wrap(~variable, ncol = 1)+
+    stat_smooth(aes(Time, value, linetype = "Smooth") )+
+    scale_x_datetime(breaks = date_breaks("5 min"), labels = date_format("%H:%M"))+
+    labs(x = "Time", 
+         y = "Load (N)", color="Loading station",
+         linetype = "", 
+         title = gsub("^.*?/ *(.*?) *.txt","\\1", i))+  # only use part of the file name for the title
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))+
+    theme_bw()+
+    coord_cartesian(ylim = c(-0.5, 4))
+  # coord_cartesian(ylim = c(-0.5, max(df_long$value)))
+  
+  # save plot to the folder
+  ggsave(myplot,   
+         path = folderpath, 
+         file = paste0(gsub("^.*?/ *(.*?) *.txt","\\1", i), ".png"), 
+         scale = 2)
+  # print(myplot) # within a for loop, one requires to force the print
+}
+
 
 # Reproducible science using RMarkdown -----------------------------------
 
 # https://rmarkdown.rstudio.com/
   
-
 
 # Deploying web apps with Shiny -------------------------------------------
 
